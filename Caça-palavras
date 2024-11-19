@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caça-Palavras</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      margin: 20px 0;
+    }
+
+    #game-container {
+      display: inline-block;
+      margin: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(10, 40px);
+      gap: 5px;
+      justify-content: center;
+    }
+
+    .cell {
+      width: 40px;
+      height: 40px;
+      background-color: white;
+      border: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .cell.selected {
+      background-color: #87ceeb;
+    }
+
+    .cell.correct {
+      background-color: #32cd32;
+    }
+
+    #word-list {
+      margin-top: 20px;
+    }
+
+    .found {
+      text-decoration: line-through;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Caça-Palavras</h1>
+  <div id="game-container">
+    <div id="grid" class="grid"></div>
+    <div id="word-list">
+      <h3>Palavras para encontrar:</h3>
+      <ul id="words"></ul>
+    </div>
+  </div>
+
+  <script>
+    const wordsToFind = ["HTML", "CSS", "JAVASCRIPT", "GAME", "WEB"];
+    const gridSize = 10;
+    const gridElement = document.getElementById("grid");
+    const wordsListElement = document.getElementById("words");
+    let selectedCells = [];
+    let wordGrid = Array.from({ length: gridSize }, () =>
+      Array(gridSize).fill("")
+    );
+
+    // Gerar grade e preencher com palavras
+    function createWordGrid() {
+      // Posicionar palavras na grade
+      wordsToFind.forEach(word => {
+        placeWord(word);
+      });
+
+      // Preencher espaços vazios com letras aleatórias
+      for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+          if (wordGrid[row][col] === "") {
+            wordGrid[row][col] = String.fromCharCode(
+              65 + Math.floor(Math.random() * 26)
+            );
+          }
+        }
+      }
+
+      // Renderizar grade
+      renderGrid();
+    }
+
+    // Função para posicionar palavras
+    function placeWord(word) {
+      const directions = [
+        [0, 1], // Horizontal
+        [1, 0], // Vertical
+        [1, 1], // Diagonal
+      ];
+
+      let placed = false;
+      while (!placed) {
+        const direction = directions[Math.floor(Math.random() * directions.length)];
+        const startX = Math.floor(Math.random() * gridSize);
+        const startY = Math.floor(Math.random() * gridSize);
+
+        let x = startX;
+        let y = startY;
+        let valid = true;
+
+        for (let i = 0; i < word.length; i++) {
+          if (
+            x < 0 ||
+            y < 0 ||
+            x >= gridSize ||
+            y >= gridSize ||
+            (wordGrid[y][x] !== "" && wordGrid[y][x] !== word[i])
+          ) {
+            valid = false;
+            break;
+          }
+          x += direction[0];
+          y += direction[1];
+        }
+
+        if (valid) {
+          x = startX;
+          y = startY;
+          for (let i = 0; i < word.length; i++) {
+            wordGrid[y][x] = word[i];
+            x += direction[0];
+            y += direction[1];
+          }
+          placed = true;
+        }
+      }
+    }
+
+    // Renderizar grade no DOM
+    function renderGrid() {
+      gridElement.innerHTML = "";
+      wordGrid.forEach((row, rowIndex) => {
+        row.forEach((letter, colIndex) => {
+          const cell = document.createElement("div");
+          cell.classList.add("cell");
+          cell.textContent = letter;
+          cell.dataset.row = rowIndex;
+          cell.dataset.col = colIndex;
+          gridElement.appendChild(cell);
+        });
+      });
+
+      // Adicionar palavras à lista
+      wordsToFind.forEach(word => {
+        const li = document.createElement("li");
+        li.textContent = word;
+        li.dataset.word = word;
+        wordsListElement.appendChild(li);
+      });
+    }
+
+    // Gerenciar seleção de células
+    gridElement.addEventListener("click", event => {
+      if (!event.target.classList.contains("cell")) return;
+
+      event.target.classList.toggle("selected");
+      const row = parseInt(event.target.dataset.row, 10);
+      const col = parseInt(event.target.dataset.col, 10);
+
+      const cellIndex = selectedCells.findIndex(cell => cell.row === row && cell.col === col);
+      if (cellIndex !== -1) {
+        selectedCells.splice(cellIndex, 1);
+      } else {
+        selectedCells.push({ row, col });
+      }
+
+      checkWord();
+    });
+
+    // Verificar se a seleção forma uma palavra
+    function checkWord() {
+      const selectedWord = selectedCells
+        .map(cell => wordGrid[cell.row][cell.col])
+        .join("");
+
+      const foundIndex = wordsToFind.indexOf(selectedWord);
+      if (foundIndex !== -1) {
+        // Palavra encontrada
+        selectedCells.forEach(cell => {
+          const cellElement = gridElement.querySelector(
+            `[data-row="${cell.row}"][data-col="${cell.col}"]`
+          );
+          cellElement.classList.remove("selected");
+          cellElement.classList.add("correct");
+        });
+
+        // Atualizar a lista de palavras
+        const wordElement = wordsListElement.querySelector(
+          `[data-word="${wordsToFind[foundIndex]}"]`
+        );
+        wordElement.classList.add("found");
+
+        selectedCells = [];
+      }
+    }
+
+    createWordGrid();
+  </script>
+</body>
+</html>
